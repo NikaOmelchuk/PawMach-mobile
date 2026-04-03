@@ -18,12 +18,20 @@ export default function LoginScreen({ navigation }) {
         }
         setLoading(true);
         try {
-            const res = await api.post('/auth/login/', { email, password });
+            const res = await api.post('/auth/login/', { email: email.trim().toLowerCase(), password });
             await AsyncStorage.setItem('token', res.data.token);
             await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
             navigation.replace('Surveys');
         } catch (err) {
-            Alert.alert('Помилка', err.response?.data?.detail || 'Не вдалося увійти');
+            console.error('Login error:', err, err.response?.data);
+            let errMsg = 'Не вдалося увійти. Перевірте з\'єднання.';
+            if (err.response && err.response.data) {
+                const data = err.response.data;
+                errMsg = data.detail || data.non_field_errors?.[0] || Object.values(data)[0]?.[0] || `Помилка сервера: ${err.response.status}`;
+            } else if (err.message) {
+                errMsg = err.message;
+            }
+            Alert.alert('Помилка', errMsg);
         } finally {
             setLoading(false);
         }

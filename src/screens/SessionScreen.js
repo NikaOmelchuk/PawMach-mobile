@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ActivityIndicator, Alert, ScrollView, Clipboard, ToastAndroid, Platform
+    ActivityIndicator, Alert, ScrollView, Clipboard, ToastAndroid, Platform, Dimensions
 } from 'react-native';
 import api from '../api';
 import { useTheme } from '../theme';
@@ -22,9 +22,8 @@ export default function SessionScreen({ route, navigation }) {
     const [results, setResults] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
 
-    // Load current user info
     useEffect(() => {
-        api.get('/auth/profile/').then(res => setCurrentUser(res.data)).catch(() => {});
+        api.get('/auth/profile/').then(res => setCurrentUser(res.data)).catch(() => { });
     }, []);
 
     useEffect(() => {
@@ -35,7 +34,6 @@ export default function SessionScreen({ route, navigation }) {
         }
     }, [id, surveyId]);
 
-    // Poll session status
     useEffect(() => {
         let interval;
         if (session?.id) {
@@ -43,11 +41,10 @@ export default function SessionScreen({ route, navigation }) {
                 try {
                     const res = await api.get(`/sessions/${session.id}/`);
                     setSession(res.data);
-                    // If session just became completed and we don't have results yet
                     if (res.data.status === 'completed' && results.length === 0) {
                         fetchResults(session.id);
                     }
-                } catch {}
+                } catch { }
             }, 3000);
         }
         return () => clearInterval(interval);
@@ -58,7 +55,7 @@ export default function SessionScreen({ route, navigation }) {
             const res = await api.get(`/sessions/${sessionId}/results/`);
             setResults(res.data);
             setPhase('results');
-        } catch {}
+        } catch { }
     }
 
     async function loadSession(sId) {
@@ -200,12 +197,10 @@ export default function SessionScreen({ route, navigation }) {
         return '💔';
     }
 
-    // ── LOADING ──────────────────────────────────────────────────────────────
     if (phase === 'loading') {
         return <View style={s.center}><ActivityIndicator size="large" color="#7c3aed" /></View>;
     }
 
-    // ── JOIN ─────────────────────────────────────────────────────────────────
     if (phase === 'join') {
         return (
             <View style={s.root}>
@@ -234,7 +229,7 @@ export default function SessionScreen({ route, navigation }) {
         );
     }
 
-    // ── RESULTS ──────────────────────────────────────────────────────────────
+
     if (phase === 'results') {
         return (
             <View style={s.root}>
@@ -285,12 +280,10 @@ export default function SessionScreen({ route, navigation }) {
                                         {r.user1?.username} & {r.user2?.username}
                                     </Text>
 
-                                    {/* Score bar */}
                                     <View style={s.scoreBarWrap}>
                                         <View style={[s.scoreBar, { width: `${score}%`, backgroundColor: scoreColor }]} />
                                     </View>
 
-                                    {/* Tags */}
                                     {r.lifestyle_tags?.length > 0 && (
                                         <View style={s.tagsRow}>
                                             {r.lifestyle_tags.map((tag, ti) => (
@@ -301,7 +294,6 @@ export default function SessionScreen({ route, navigation }) {
                                         </View>
                                     )}
 
-                                    {/* Strengths */}
                                     {r.strengths?.length > 0 && (
                                         <View style={s.factorSection}>
                                             <Text style={s.factorTitle}>💚 Спільне</Text>
@@ -311,7 +303,6 @@ export default function SessionScreen({ route, navigation }) {
                                         </View>
                                     )}
 
-                                    {/* Weaknesses */}
                                     {r.weaknesses?.length > 0 && (
                                         <View style={s.factorSection}>
                                             <Text style={s.factorTitle}>🔶 Відмінності</Text>
@@ -333,7 +324,7 @@ export default function SessionScreen({ route, navigation }) {
         );
     }
 
-    // ── SURVEY ───────────────────────────────────────────────────────────────
+
     const q = questions[currentQ];
     const total = questions.length;
     const isLast = currentQ === total - 1;
@@ -361,7 +352,6 @@ export default function SessionScreen({ route, navigation }) {
                     <Text style={s.doneText}>Відповіді надіслано!</Text>
                     <Text style={s.doneSub}>Чекайте поки всі учасники завершать</Text>
 
-                    {/* Organizer: complete button */}
                     {isOrganizer && !session?.status !== 'completed' && (
                         <TouchableOpacity
                             style={[s.btn, s.btnComplete, { marginTop: 24 }]}
@@ -390,22 +380,11 @@ export default function SessionScreen({ route, navigation }) {
                     <Text style={s.qText}>{q.text}</Text>
 
                     {q.question_type === 'scale' ? (
-                        <View style={s.scaleWrap}>
-                            <Text style={s.scaleVal}>{answers[q.id]?.scale_value ?? 5}</Text>
-                            {[1,2,3,4,5,6,7,8,9,10].map(v => (
-                                <TouchableOpacity
-                                    key={v}
-                                    style={[s.scaleBtn, answers[q.id]?.scale_value === v && s.scaleBtnActive]}
-                                    onPress={() => handleScale(q.id, v)}
-                                >
-                                    <Text style={[s.scaleBtnText, answers[q.id]?.scale_value === v && { color: '#fff' }]}>{v}</Text>
-                                </TouchableOpacity>
-                            ))}
-                            <View style={s.scaleLabels}>
-                                <Text style={s.scaleLabelText}>Зовсім ні</Text>
-                                <Text style={s.scaleLabelText}>Повністю так</Text>
-                            </View>
-                        </View>
+                        <ScalePicker
+                            value={answers[q.id]?.scale_value ?? 5}
+                            onChange={val => handleScale(q.id, val)}
+                            colors={colors}
+                        />
                     ) : (
                         (q.options || []).map(opt => (
                             <TouchableOpacity
@@ -434,7 +413,7 @@ export default function SessionScreen({ route, navigation }) {
                         )}
                     </View>
 
-                    {/* Participants list */}
+
                     <View style={s.participantsWrap}>
                         <View style={s.participantsHeader}>
                             <Text style={s.participantsTitle}>👥 Учасники</Text>
@@ -461,6 +440,110 @@ export default function SessionScreen({ route, navigation }) {
                     </View>
                 </ScrollView>
             ) : null}
+        </View>
+    );
+}
+
+const ITEM_SIZE = 64;
+const SCALE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+function ScalePicker({ value, onChange, colors }) {
+    const scrollRef = useRef(null);
+    const screenWidth = Dimensions.get('window').width;
+    const sidePadding = (screenWidth - ITEM_SIZE) / 2;
+
+    useEffect(() => {
+        const idx = SCALE_VALUES.indexOf(value);
+        if (scrollRef.current && idx >= 0) {
+            setTimeout(() => {
+                scrollRef.current?.scrollTo({ x: idx * ITEM_SIZE, animated: true });
+            }, 80);
+        }
+    }, [value]);
+
+    function onMomentumScrollEnd(e) {
+        const x = e.nativeEvent.contentOffset.x;
+        const idx = Math.round(x / ITEM_SIZE);
+        const clamped = Math.max(0, Math.min(SCALE_VALUES.length - 1, idx));
+        onChange(SCALE_VALUES[clamped]);
+    }
+
+    return (
+        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+
+            <View style={{
+                position: 'absolute', top: 0, left: 0, width: sidePadding, height: ITEM_SIZE + 20, zIndex: 2,
+                background: 'transparent'
+            }} pointerEvents="none" />
+
+
+            <View style={{
+                width: 88, height: 88, borderRadius: 44,
+                backgroundColor: colors.primary + '22',
+                borderWidth: 2, borderColor: colors.primary,
+                alignItems: 'center', justifyContent: 'center',
+                marginBottom: 16,
+            }}>
+                <Text style={{ fontSize: 40, fontWeight: '800', color: colors.primary }}>{value}</Text>
+            </View>
+
+
+            <View style={{ position: 'relative', width: '100%' }}>
+
+                <View style={{
+                    position: 'absolute',
+                    left: (screenWidth - ITEM_SIZE) / 2,
+                    top: 0,
+                    width: ITEM_SIZE,
+                    height: ITEM_SIZE,
+                    borderRadius: 16,
+                    backgroundColor: colors.primary + '33',
+                    borderWidth: 2,
+                    borderColor: colors.primary,
+                    zIndex: 1,
+                }} pointerEvents="none" />
+
+                <ScrollView
+                    ref={scrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={ITEM_SIZE}
+                    decelerationRate="fast"
+                    onMomentumScrollEnd={onMomentumScrollEnd}
+                    contentContainerStyle={{ paddingHorizontal: sidePadding }}
+                    contentOffset={{ x: (SCALE_VALUES.indexOf(value)) * ITEM_SIZE, y: 0 }}
+                >
+                    {SCALE_VALUES.map((v) => {
+                        const isActive = v === value;
+                        return (
+                            <TouchableOpacity
+                                key={v}
+                                style={{
+                                    width: ITEM_SIZE,
+                                    height: ITEM_SIZE,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 2,
+                                }}
+                                onPress={() => onChange(v)}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={{
+                                    fontSize: isActive ? 30 : 20,
+                                    fontWeight: isActive ? '800' : '400',
+                                    color: isActive ? colors.primary : colors.textSecondary,
+                                    opacity: isActive ? 1 : 0.45,
+                                }}>{v}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 8, marginTop: 8 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>Зовсім ні</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>Повністю так</Text>
+            </View>
         </View>
     );
 }
@@ -513,7 +596,7 @@ const getStyles = (colors) => StyleSheet.create({
     avatarText: { color: colors.accent, fontSize: 12, fontWeight: '700' },
     onlineMark: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981', borderWidth: 2, borderColor: colors.card },
     participantName: { color: colors.text, fontSize: 14, fontWeight: '500', flex: 1 },
-    // Results styles
+
     resultsWrap: { padding: 16 },
     resultsBanner: { alignItems: 'center', paddingVertical: 24 },
     resultsBannerTitle: { color: colors.text, fontSize: 22, fontWeight: '700', textAlign: 'center', marginBottom: 6 },

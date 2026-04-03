@@ -7,10 +7,10 @@ import { useTheme } from '../theme';
 export default function RegisterScreen({ navigation }) {
     const { colors } = useTheme();
     const s = getStyles(colors);
-    const [form, setForm] = useState({ 
-        username: '', 
+    const [form, setForm] = useState({
+        username: '',
         first_name: '',
-        email: '', 
+        email: '',
         gender: '',
         birth_date: '',
         password: '',
@@ -31,7 +31,7 @@ export default function RegisterScreen({ navigation }) {
             Alert.alert('Помилка', 'Паролі не співпадають');
             return;
         }
-        // Basic date format check YYYY-MM-DD
+
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(form.birth_date)) {
             Alert.alert('Помилка', 'Дата народження має бути у форматі РРРР-ММ-ДД');
@@ -40,7 +40,12 @@ export default function RegisterScreen({ navigation }) {
 
         setLoading(true);
         try {
-            const res = await api.post('/auth/register/', form);
+            const submitData = {
+                ...form,
+                email: form.email.trim().toLowerCase(),
+                username: form.username.trim()
+            };
+            const res = await api.post('/auth/register/', submitData);
             await AsyncStorage.setItem('token', res.data.token);
             await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
             navigation.replace('Surveys');
@@ -57,8 +62,8 @@ export default function RegisterScreen({ navigation }) {
     const renderGenderOption = (label, value) => {
         const isActive = form.gender === value;
         return (
-            <TouchableOpacity 
-                style={[s.genderBtn, isActive && s.genderBtnActive]} 
+            <TouchableOpacity
+                style={[s.genderBtn, isActive && s.genderBtnActive]}
                 onPress={() => update('gender', value)}
             >
                 <Text style={[s.genderText, isActive && s.genderTextActive]}>{label}</Text>
@@ -75,7 +80,7 @@ export default function RegisterScreen({ navigation }) {
 
                     <TextInput style={s.input} placeholder="Логін (username)" placeholderTextColor="#a78bfa"
                         value={form.username} onChangeText={v => update('username', v)} autoCapitalize="none" />
-                    
+
                     <TextInput style={s.input} placeholder="Ваше ім'я" placeholderTextColor="#a78bfa"
                         value={form.first_name} onChangeText={v => update('first_name', v)} />
 
@@ -94,7 +99,7 @@ export default function RegisterScreen({ navigation }) {
 
                     <TextInput style={s.input} placeholder="Пароль" placeholderTextColor="#a78bfa"
                         value={form.password} onChangeText={v => update('password', v)} secureTextEntry />
-                        
+
                     <TextInput style={s.input} placeholder="Підтвердження пароля" placeholderTextColor="#a78bfa"
                         value={form.password2} onChangeText={v => update('password2', v)} secureTextEntry />
 

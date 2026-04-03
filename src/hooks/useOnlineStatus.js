@@ -12,9 +12,9 @@ export function useOnlineStatus() {
             const token = await AsyncStorage.getItem('token');
             if (!token || !isMounted) return;
 
-            // Convert http://host:port/api/v1 to ws://host:port/ws/online/
+
             const url = API_BASE.replace('http', 'ws').replace('/api/v1', '/ws/online/') + `?token=${token}`;
-            
+
             if (wsRef.current) return;
 
             const ws = new WebSocket(url);
@@ -22,7 +22,7 @@ export function useOnlineStatus() {
 
             ws.onclose = () => {
                 wsRef.current = null;
-                if (isMounted) setTimeout(connect, 5000); // Reconnect
+                if (isMounted) setTimeout(connect, 5000);
             };
 
             ws.onerror = () => {
